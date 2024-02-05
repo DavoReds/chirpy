@@ -4,31 +4,29 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/DavoReds/chirpy/internal/middleware"
+	"github.com/DavoReds/chirpy/internal/routes"
 	"github.com/go-chi/chi/v5"
 )
 
 func main() {
-	const filepathRoot = "."
-	const port = "8080"
-	apiCfg := apiConfig{
-		fileServerHits: 0,
+	apiCfg := middleware.ApiConfig{
+		FileServerHits: 0,
+		Port:           "8080",
+		FilesystemRoot: ".",
 	}
 
 	r := chi.NewRouter()
-	fsHandler := apiCfg.middlewareMetricsInc(http.StripPrefix("/app", http.FileServer(http.Dir(filepathRoot))))
-	r.Handle("/app", fsHandler)
-	r.Handle("/app/*", fsHandler)
-	r.Get("/healthz", handlerReadiness)
-	r.Get("/metrics", apiCfg.handlerMetrics)
-	r.HandleFunc("/reset", apiCfg.handleReset)
+	routes.MountAppEndpoints(&apiCfg, r)
+	routes.MountAPIEndpoints(&apiCfg, r)
 
-	corsMux := middlewareCors(r)
+	corsMux := middleware.MiddlewareCors(r)
 
 	server := &http.Server{
-		Addr:    ":" + port,
+		Addr:    ":" + apiCfg.Port,
 		Handler: corsMux,
 	}
 
-	log.Printf("Serving files from %s on port: %s\n", filepathRoot, port)
+	log.Printf("Serving files from %s on port: %s\n", apiCfg.FilesystemRoot, apiCfg.Port)
 	log.Fatal(server.ListenAndServe())
 }
