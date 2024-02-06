@@ -12,8 +12,10 @@ import (
 func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", handlerReadiness)
-	apiRouter.Post("/validate_chirp", handlerValidateChirp)
-	apiRouter.HandleFunc("/reset", apiCfg.HandleReset)
+	apiRouter.Post("/chirps", handlerPostChirp)
+	apiRouter.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
+		HandleReset(w, r, apiCfg)
+	})
 
 	router.Mount("/api", apiRouter)
 }
@@ -23,6 +25,12 @@ func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 
 	w.Write([]byte(http.StatusText(http.StatusOK)))
+}
+
+func HandleReset(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+	cfg.FileServerHits = 0
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Hits reset to 0"))
 }
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) error {
@@ -64,10 +72,11 @@ type validateChirpParams struct {
 }
 
 type validateChirpResponse struct {
-	CleanedBody string `json:"cleaned_body"`
+	ID   int    `json:"id"`
+	Body string `json:"body"`
 }
 
-func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
+func handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	params := validateChirpParams{}
 	err := decoder.Decode(&params)
@@ -82,5 +91,5 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body := cleanString(params.Body)
-	respondWithJSON(w, 200, validateChirpResponse{CleanedBody: body})
+	respondWithJSON(w, 201, validateChirpResponse{Body: body})
 }
