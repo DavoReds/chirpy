@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/DavoReds/chirpy/internal/middleware"
 	"github.com/go-chi/chi/v5"
@@ -13,10 +14,13 @@ func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", handlerReadiness)
 	apiRouter.Get("/chirps", func(w http.ResponseWriter, r *http.Request) {
-		handlerGetChirp(w, r, apiCfg)
+		handlerGetChirps(w, r, apiCfg)
 	})
 	apiRouter.Post("/chirps", func(w http.ResponseWriter, r *http.Request) {
-		handlerPostChirp(w, r, apiCfg)
+		handlerPostChirps(w, r, apiCfg)
+	})
+	apiRouter.Get("/chirps/{chirpID}", func(w http.ResponseWriter, r *http.Request) {
+		handlerGetChirp(w, r, apiCfg)
 	})
 	apiRouter.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
 		handlerReset(w, r, apiCfg)
@@ -38,18 +42,18 @@ func handlerReset(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiCon
 	w.Write([]byte("Hits reset to 0"))
 }
 
-func handlerGetChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+func handlerGetChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
 	data, err := cfg.DB.GetChirps()
 	if err != nil {
-		respondWithError(w, 500, "Something went wrong")
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
 		return
 	}
 
-	respondWithJSON(w, 200, data)
+	respondWithJSON(w, http.StatusOK, data)
 	return
 }
 
-func handlerPostChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+func handlerPostChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
 	type params struct {
 		Body string `json:"body"`
 	}
@@ -58,12 +62,12 @@ func handlerPostChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 	parameters := params{}
 	if err := decoder.Decode(&parameters); err != nil {
 		log.Println(err)
-		respondWithError(w, 500, "Something went wrong")
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
 		return
 	}
 
 	if len(parameters.Body) > 140 {
-		respondWithError(w, 400, "Chirp is too long")
+		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 		return
 	}
 
@@ -71,9 +75,26 @@ func handlerPostChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 	chirp, err := cfg.DB.CreateChirp(body)
 	if err != nil {
 		log.Println(err)
-		respondWithError(w, 500, "Something went wrong")
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
 		return
 	}
 
-	respondWithJSON(w, 201, chirp)
+	respondWithJSON(w, http.StatusCreated, chirp)
+}
+
+func handlerGetChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+	idParam := chi.URLParam(r, "chirpID")
+	id, err := strconv.Atoi(idParam)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	chirp, err := cfg.DB.GetChirp(id)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, chirp)
 }

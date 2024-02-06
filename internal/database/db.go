@@ -63,6 +63,21 @@ func (db *DB) GetChirps() ([]domain.Chirp, error) {
 	return data.Chirps, nil
 }
 
+func (db *DB) GetChirp(id int) (domain.Chirp, error) {
+	data, err := db.loadDB()
+	if err != nil {
+		return domain.Chirp{}, err
+	}
+
+	for _, chirp := range data.Chirps {
+		if chirp.ID == id {
+			return chirp, nil
+		}
+	}
+
+	return domain.Chirp{}, errors.New("Doesn't exist")
+}
+
 func (db *DB) loadDB() (Data, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
