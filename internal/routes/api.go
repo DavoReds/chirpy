@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/DavoReds/chirpy/internal/domain"
 	"github.com/DavoReds/chirpy/internal/middleware"
 	"github.com/go-chi/chi/v5"
 )
@@ -37,11 +38,6 @@ func handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 		Body string `json:"body"`
 	}
 
-	type response struct {
-		ID   int    `json:"id"`
-		Body string `json:"body"`
-	}
-
 	decoder := json.NewDecoder(r.Body)
 	parameters := params{}
 	if err := decoder.Decode(&parameters); err != nil {
@@ -55,5 +51,5 @@ func handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body := cleanString(parameters.Body)
-	respondWithJSON(w, 201, response{Body: body})
+	respondWithJSON(w, 201, domain.Chirp{Body: body})
 }
