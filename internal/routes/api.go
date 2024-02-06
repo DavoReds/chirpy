@@ -3,6 +3,7 @@ package routes
 import (
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/DavoReds/chirpy/internal/middleware"
 	"github.com/go-chi/chi/v5"
@@ -39,12 +40,31 @@ func respondWithError(w http.ResponseWriter, code int, msg string) error {
 	return respondWithJSON(w, code, map[string]string{"error": msg})
 }
 
+func cleanString(text string) string {
+	words := strings.Split(text, " ")
+
+	for i, word := range words {
+		switch strings.ToLower(word) {
+		case "kerfuffle":
+			words[i] = "****"
+		case "sharbert":
+			words[i] = "****"
+		case "fornax":
+			words[i] = "****"
+		}
+	}
+
+	clean := strings.Join(words, " ")
+
+	return clean
+}
+
 type validateChirpParams struct {
 	Body string `json:"body"`
 }
 
 type validateChirpResponse struct {
-	Valid bool `json:"valid"`
+	CleanedBody string `json:"cleaned_body"`
 }
 
 func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
@@ -61,5 +81,6 @@ func handlerValidateChirp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respondWithJSON(w, 200, validateChirpResponse{Valid: true})
+	body := cleanString(params.Body)
+	respondWithJSON(w, 200, validateChirpResponse{CleanedBody: body})
 }
