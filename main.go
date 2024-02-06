@@ -19,6 +19,7 @@ func main() {
 	r := chi.NewRouter()
 	routes.MountAppEndpoints(&apiCfg, r)
 	routes.MountAPIEndpoints(&apiCfg, r)
+	routes.MountAdminEndpoints(&apiCfg, r)
 
 	corsMux := middleware.MiddlewareCors(r)
 

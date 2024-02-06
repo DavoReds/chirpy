@@ -8,7 +8,6 @@ import (
 func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", HandlerReadiness)
-	apiRouter.Get("/metrics", apiCfg.HandlerMetrics)
 	apiRouter.HandleFunc("/reset", apiCfg.HandleReset)
 
 	router.Mount("/api", apiRouter)
