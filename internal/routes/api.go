@@ -2,9 +2,9 @@ package routes
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 
-	"github.com/DavoReds/chirpy/internal/domain"
 	"github.com/DavoReds/chirpy/internal/middleware"
 	"github.com/go-chi/chi/v5"
 )
@@ -12,7 +12,9 @@ import (
 func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", handlerReadiness)
-	apiRouter.Post("/chirps", handlerPostChirp)
+	apiRouter.Post("/chirps", func(w http.ResponseWriter, r *http.Request) {
+		handlerPostChirp(w, r, apiCfg)
+	})
 	apiRouter.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
 		HandleReset(w, r, apiCfg)
 	})
@@ -33,7 +35,7 @@ func HandleReset(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConf
 	w.Write([]byte("Hits reset to 0"))
 }
 
-func handlerPostChirp(w http.ResponseWriter, r *http.Request) {
+func handlerPostChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
 	type params struct {
 		Body string `json:"body"`
 	}
@@ -41,6 +43,7 @@ func handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 	decoder := json.NewDecoder(r.Body)
 	parameters := params{}
 	if err := decoder.Decode(&parameters); err != nil {
+		log.Println(err)
 		respondWithError(w, 500, "Something went wrong")
 		return
 	}
@@ -51,5 +54,12 @@ func handlerPostChirp(w http.ResponseWriter, r *http.Request) {
 	}
 
 	body := cleanString(parameters.Body)
-	respondWithJSON(w, 201, domain.Chirp{Body: body})
+	chirp, err := cfg.DB.CreateChirp(body)
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, 500, "Something went wrong")
+		return
+	}
+
+	respondWithJSON(w, 201, chirp)
 }
