@@ -12,11 +12,14 @@ import (
 func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", handlerReadiness)
+	apiRouter.Get("/chirps", func(w http.ResponseWriter, r *http.Request) {
+		handlerGetChirp(w, r, apiCfg)
+	})
 	apiRouter.Post("/chirps", func(w http.ResponseWriter, r *http.Request) {
 		handlerPostChirp(w, r, apiCfg)
 	})
 	apiRouter.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
-		HandleReset(w, r, apiCfg)
+		handlerReset(w, r, apiCfg)
 	})
 
 	router.Mount("/api", apiRouter)
@@ -29,10 +32,21 @@ func handlerReadiness(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(http.StatusText(http.StatusOK)))
 }
 
-func HandleReset(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+func handlerReset(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
 	cfg.FileServerHits = 0
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("Hits reset to 0"))
+}
+
+func handlerGetChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+	data, err := cfg.DB.GetChirps()
+	if err != nil {
+		respondWithError(w, 500, "Something went wrong")
+		return
+	}
+
+	respondWithJSON(w, 200, data)
+	return
 }
 
 func handlerPostChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
