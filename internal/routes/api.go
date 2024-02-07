@@ -13,6 +13,9 @@ import (
 func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter := chi.NewRouter()
 	apiRouter.Get("/healthz", handlerReadiness)
+	apiRouter.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
+		handlerReset(w, r, apiCfg)
+	})
 	apiRouter.Get("/chirps", func(w http.ResponseWriter, r *http.Request) {
 		handlerGetChirps(w, r, apiCfg)
 	})
@@ -22,8 +25,8 @@ func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter.Get("/chirps/{chirpID}", func(w http.ResponseWriter, r *http.Request) {
 		handlerGetChirp(w, r, apiCfg)
 	})
-	apiRouter.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
-		handlerReset(w, r, apiCfg)
+	apiRouter.Post("/users", func(w http.ResponseWriter, r *http.Request) {
+		handlerPostUsers(w, r, apiCfg)
 	})
 
 	router.Mount("/api", apiRouter)
@@ -97,4 +100,27 @@ func handlerGetChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.Api
 	}
 
 	respondWithJSON(w, http.StatusOK, chirp)
+}
+
+func handlerPostUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+	type parameters struct {
+		Email string `json:"email"`
+	}
+
+	decoder := json.NewDecoder(r.Body)
+	params := parameters{}
+	if err := decoder.Decode(&params); err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
+	user, err := cfg.DB.CreateUser(params.Email)
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, user)
 }
