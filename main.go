@@ -1,8 +1,10 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/DavoReds/chirpy/internal/database"
 	"github.com/DavoReds/chirpy/internal/middleware"
@@ -11,6 +13,13 @@ import (
 )
 
 func main() {
+	debug_mode := flag.Bool("debug", false, "Run the program in debug mode")
+	flag.Parse()
+
+	if *debug_mode {
+		os.Remove("./database.json")
+	}
+
 	apiCfg := middleware.ApiConfig{
 		FileServerHits: 0,
 		Port:           "8080",
