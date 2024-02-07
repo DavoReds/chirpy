@@ -8,6 +8,7 @@ import (
 
 	"github.com/DavoReds/chirpy/internal/middleware"
 	"github.com/go-chi/chi/v5"
+	"golang.org/x/crypto/bcrypt"
 )
 
 func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
@@ -27,6 +28,9 @@ func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	})
 	apiRouter.Post("/users", func(w http.ResponseWriter, r *http.Request) {
 		handlerPostUsers(w, r, apiCfg)
+	})
+	apiRouter.Post("/login", func(w http.ResponseWriter, r *http.Request) {
+		handlerLogin(w, r, apiCfg)
 	})
 
 	router.Mount("/api", apiRouter)
@@ -58,14 +62,14 @@ func handlerGetChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 
 func handlerPostChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
 	type params struct {
-		Body string `json:"body"`
+		Body string `json:"body" validate:"required"`
 	}
 
 	decoder := json.NewDecoder(r.Body)
 	parameters := params{}
 	if err := decoder.Decode(&parameters); err != nil {
 		log.Println(err)
-		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		respondWithError(w, http.StatusBadRequest, "Invalid request")
 		return
 	}
 
@@ -104,6 +108,59 @@ func handlerGetChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.Api
 
 func handlerPostUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
 	type parameters struct {
+		Password string `json:"password" validate:"required"`
+		Email    string `json:"email" validate:"required"`
+	}
+
+	type response struct {
+		ID    int    `json:"id"`
+		Email string `json:"email"`
+	}
+
+	var params parameters
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&params); err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusBadRequest, "Invalid JSON format")
+		return
+	}
+
+	if params.Email == "" {
+		respondWithError(w, http.StatusBadRequest, "Email is required")
+		return
+	}
+	if params.Password == "" {
+		respondWithError(w, http.StatusBadRequest, "Password is required")
+		return
+	}
+
+	password, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcrypt.DefaultCost)
+	if err != nil {
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
+	user, err := cfg.DB.CreateUser(params.Email, password)
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusBadRequest, "Email already used")
+		return
+	}
+
+	respondWithJSON(w, http.StatusCreated, response{
+		ID:    user.ID,
+		Email: user.Email,
+	})
+}
+
+func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+	type parameters struct {
+		Password string `json:"password" validate:"required"`
+		Email    string `json:"email" validate:"required"`
+	}
+
+	type response struct {
+		ID    int    `json:"id"`
 		Email string `json:"email"`
 	}
 
@@ -111,16 +168,24 @@ func handlerPostUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 	params := parameters{}
 	if err := decoder.Decode(&params); err != nil {
 		log.Println(err)
-		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		respondWithError(w, http.StatusBadRequest, "Invalid request")
 		return
 	}
 
-	user, err := cfg.DB.CreateUser(params.Email)
+	user, err := cfg.DB.GetUserByEmail(params.Email)
 	if err != nil {
-		log.Println(err)
-		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		respondWithError(w, http.StatusNotFound, "User not found")
 		return
 	}
 
-	respondWithJSON(w, http.StatusCreated, user)
+	err = bcrypt.CompareHashAndPassword(user.Password, []byte(params.Password))
+	if err != nil {
+		respondWithError(w, http.StatusUnauthorized, "Invalid password")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, response{
+		ID:    user.ID,
+		Email: user.Email,
+	})
 }
