@@ -10,9 +10,15 @@ import (
 	"github.com/DavoReds/chirpy/internal/middleware"
 	"github.com/DavoReds/chirpy/internal/routes"
 	"github.com/go-chi/chi/v5"
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file")
+	}
+
 	debug_mode := flag.Bool("debug", false, "Run the program in debug mode")
 	flag.Parse()
 
@@ -20,11 +26,17 @@ func main() {
 		os.Remove("./database.json")
 	}
 
+	jwtSecret, exists := os.LookupEnv("JWT_SECRET")
+	if !exists {
+		log.Fatal("JWT_SECRET env variable not set")
+	}
+
 	apiCfg := middleware.ApiConfig{
 		FileServerHits: 0,
 		Port:           "8080",
 		FilesystemRoot: ".",
 		DB:             *database.NewDB("./database.json"),
+		JWTSecret:      jwtSecret,
 	}
 
 	r := chi.NewRouter()

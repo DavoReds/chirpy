@@ -11,6 +11,7 @@ type ApiConfig struct {
 	Port           string
 	FilesystemRoot string
 	DB             database.DB
+	JWTSecret      string
 }
 
 func (cfg *ApiConfig) MiddlewareMetricsInc(next http.Handler) http.Handler {
