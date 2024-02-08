@@ -16,8 +16,8 @@ type DB struct {
 }
 
 type Data struct {
-	Chirps []domain.Chirp `json:"chirps"`
-	Users  []domain.User  `json:"users"`
+	Chirps []domain.Chirp      `json:"chirps"`
+	Users  map[int]domain.User `json:"users"`
 }
 
 func NewDB(path string) *DB {
@@ -29,6 +29,13 @@ func NewDB(path string) *DB {
 	return database
 }
 
+func emptyData() Data {
+	return Data{
+		Users:  make(map[int]domain.User),
+		Chirps: []domain.Chirp{},
+	}
+}
+
 func (db *DB) loadDB() (Data, error) {
 	db.mu.RLock()
 	defer db.mu.RUnlock()
@@ -36,16 +43,16 @@ func (db *DB) loadDB() (Data, error) {
 	fileData, err := os.ReadFile(db.path)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
-			return Data{}, nil
+			return emptyData(), nil
 		}
 
-		return Data{}, err
+		return emptyData(), err
 	}
 
 	data := Data{}
 	err = json.Unmarshal(fileData, &data)
 	if err != nil {
-		return Data{}, err
+		return emptyData(), err
 	}
 
 	return data, nil

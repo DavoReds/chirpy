@@ -1,10 +1,10 @@
 package routes
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/DavoReds/chirpy/internal/middleware"
@@ -23,9 +23,8 @@ func handlerPostUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 		Email string `json:"email"`
 	}
 
-	var params parameters
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&params); err != nil {
+	params := &parameters{}
+	if err := decodeJSON(r.Body, params); err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusBadRequest, "Invalid JSON format")
 		return
@@ -40,13 +39,7 @@ func handlerPostUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 		return
 	}
 
-	password, err := bcrypt.GenerateFromPassword([]byte(params.Password), bcrypt.DefaultCost)
-	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
-		return
-	}
-
-	user, err := cfg.DB.CreateUser(params.Email, password)
+	user, err := cfg.DB.CreateUser(params.Email, []byte(params.Password))
 	if err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusBadRequest, "Email already used")
@@ -57,6 +50,28 @@ func handlerPostUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 		ID:    user.ID,
 		Email: user.Email,
 	})
+}
+
+func getClaims(expiresInSeconds int, userID int) *jwt.RegisteredClaims {
+	currentTime := time.Now().UTC()
+	jwtCurrentTime := jwt.NewNumericDate(currentTime)
+
+	var timeToExpire time.Time
+	if expiresInSeconds == 0 || expiresInSeconds > 24*60*60 {
+		timeToExpire = currentTime.Add(time.Hour * 24)
+	} else {
+		timeToExpire = currentTime.Add(time.Second * time.Duration(expiresInSeconds))
+	}
+	jwtTimeToExpire := jwt.NewNumericDate(timeToExpire)
+
+	claims := &jwt.RegisteredClaims{
+		Issuer:    "chirpy",
+		IssuedAt:  jwtCurrentTime,
+		ExpiresAt: jwtTimeToExpire,
+		Subject:   strconv.Itoa(userID),
+	}
+
+	return claims
 }
 
 func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
@@ -72,9 +87,8 @@ func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiCon
 		Token string `json:"token"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	params := parameters{}
-	if err := decoder.Decode(&params); err != nil {
+	params := &parameters{}
+	if err := decodeJSON(r.Body, params); err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusBadRequest, "Invalid request")
 		return
@@ -100,23 +114,7 @@ func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiCon
 		return
 	}
 
-	currentTime := time.Now().UTC()
-	jwtCurrentTime := jwt.NewNumericDate(currentTime)
-
-	var timeToExpire time.Time
-	if params.ExpiresInSeconds == 0 || params.ExpiresInSeconds > 24*60*60 {
-		timeToExpire = currentTime.Add(time.Hour * 24)
-	} else {
-		timeToExpire = currentTime.Add(time.Second * time.Duration(params.ExpiresInSeconds))
-	}
-	jwtTimeToExpire := jwt.NewNumericDate(timeToExpire)
-
-	claims := &jwt.RegisteredClaims{
-		Issuer:    "chirpy",
-		IssuedAt:  jwtCurrentTime,
-		ExpiresAt: jwtTimeToExpire,
-		Subject:   strconv.Itoa(user.ID),
-	}
+	claims := getClaims(params.ExpiresInSeconds, user.ID)
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	ss, err := token.SignedString([]byte(cfg.JWTSecret))
@@ -130,5 +128,66 @@ func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiCon
 		ID:    user.ID,
 		Email: user.Email,
 		Token: ss,
+	})
+}
+
+func handlerPutUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+	type parameters struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+
+	type response struct {
+		ID    int    `json:"id"`
+		Email string `json:"email"`
+	}
+
+	tokenHeader := r.Header.Get("Authorization")
+	if tokenHeader == "" {
+		respondWithError(w, http.StatusBadRequest, "Missing Authorization header")
+		return
+	}
+
+	tokenString := strings.TrimPrefix(tokenHeader, "Bearer ")
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return []byte(cfg.JWTSecret), nil
+	})
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
+		return
+	}
+
+	idString, err := token.Claims.GetSubject()
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
+	params := &parameters{}
+	if err := decodeJSON(r.Body, params); err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusBadRequest, "Invalid request")
+		return
+	}
+
+	user, err := cfg.DB.UpdateUser(id, params.Email, []byte(params.Password))
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
+	respondWithJSON(w, http.StatusOK, response{
+		ID:    user.ID,
+		Email: user.Email,
 	})
 }

@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"strconv"
@@ -18,28 +17,26 @@ func handlerGetChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 	}
 
 	respondWithJSON(w, http.StatusOK, data)
-	return
 }
 
 func handlerPostChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
-	type params struct {
+	type parameters struct {
 		Body string `json:"body"`
 	}
 
-	decoder := json.NewDecoder(r.Body)
-	parameters := params{}
-	if err := decoder.Decode(&parameters); err != nil {
+	params := &parameters{}
+	if err := decodeJSON(r.Body, params); err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusBadRequest, "Invalid request")
 		return
 	}
 
-	if len(parameters.Body) > 140 {
+	if len(params.Body) > 140 {
 		respondWithError(w, http.StatusBadRequest, "Chirp is too long")
 		return
 	}
 
-	body := cleanString(parameters.Body)
+	body := cleanString(params.Body)
 	chirp, err := cfg.DB.CreateChirp(body)
 	if err != nil {
 		log.Println(err)

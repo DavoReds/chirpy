@@ -25,6 +25,9 @@ func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter.Post("/users", func(w http.ResponseWriter, r *http.Request) {
 		handlerPostUsers(w, r, apiCfg)
 	})
+	apiRouter.Put("/users", func(w http.ResponseWriter, r *http.Request) {
+		handlerPutUsers(w, r, apiCfg)
+	})
 	apiRouter.Post("/login", func(w http.ResponseWriter, r *http.Request) {
 		handlerLogin(w, r, apiCfg)
 	})

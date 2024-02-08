@@ -17,19 +17,21 @@ func (db *DB) CreateUser(email string, password []byte) (domain.User, error) {
 		return domain.User{}, errors.New("User already exists")
 	}
 
-	var lastID int
-	if len(data.Users) == 0 {
-		lastID = 0
-	} else {
-		lastID = data.Users[len(data.Users)-1].ID
-	}
-	newUser := domain.User{
-		ID:       lastID + 1,
-		Email:    email,
-		Password: password,
+	lastID := maxIntKey(data.Users)
+	newID := lastID + 1
+
+	hashedPassword, err := hashPassword(password)
+	if err != nil {
+		return domain.User{}, err
 	}
 
-	data.Users = append(data.Users, newUser)
+	newUser := domain.User{
+		ID:       newID,
+		Email:    email,
+		Password: hashedPassword,
+	}
+
+	data.Users[newID] = newUser
 
 	if err = db.writeDB(data); err != nil {
 		return domain.User{}, err
@@ -44,7 +46,7 @@ func (db *DB) GetUsers() ([]domain.User, error) {
 		return nil, err
 	}
 
-	return data.Users, nil
+	return getValues(data.Users), nil
 }
 
 func (db *DB) GetUserByID(id int) (domain.User, error) {
@@ -53,13 +55,12 @@ func (db *DB) GetUserByID(id int) (domain.User, error) {
 		return domain.User{}, err
 	}
 
-	for _, user := range data.Users {
-		if user.ID == id {
-			return user, nil
-		}
+	user, exists := data.Users[id]
+	if !exists {
+		return domain.User{}, errors.New("User doesn't exist")
 	}
 
-	return domain.User{}, errors.New("User doesn't exist")
+	return user, nil
 }
 
 func (db *DB) GetUserByEmail(email string) (domain.User, error) {
@@ -75,4 +76,29 @@ func (db *DB) GetUserByEmail(email string) (domain.User, error) {
 	}
 
 	return domain.User{}, errors.New("User doesn't exist")
+}
+
+func (db *DB) UpdateUser(id int, email string, password []byte) (domain.User, error) {
+	data, err := db.loadDB()
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	hashedPassword, err := hashPassword(password)
+	if err != nil {
+		return domain.User{}, err
+	}
+
+	newUser := domain.User{
+		ID:       id,
+		Email:    email,
+		Password: hashedPassword,
+	}
+	data.Users[id] = newUser
+
+	if err = db.writeDB(data); err != nil {
+		return domain.User{}, err
+	}
+
+	return newUser, nil
 }

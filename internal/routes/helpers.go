@@ -2,9 +2,19 @@ package routes
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 )
+
+func decodeJSON(reader io.Reader, readTo interface{}) error {
+	decoder := json.NewDecoder(reader)
+	if err := decoder.Decode(readTo); err != nil {
+		return err
+	}
+
+	return nil
+}
 
 func respondWithJSON(w http.ResponseWriter, code int, payload interface{}) error {
 	response, err := json.Marshal(payload)
