@@ -12,18 +12,14 @@ func (db *DB) CreateChirp(body string) (domain.Chirp, error) {
 		return domain.Chirp{}, err
 	}
 
-	var lastID int
-	if len(data.Chirps) == 0 {
-		lastID = 0
-	} else {
-		lastID = data.Chirps[len(data.Chirps)-1].ID
-	}
+	lastID := maxIntKey(data.Chirps)
+	newID := lastID + 1
 	newChirp := domain.Chirp{
 		Body: body,
-		ID:   lastID + 1,
+		ID:   newID,
 	}
 
-	data.Chirps = append(data.Chirps, newChirp)
+	data.Chirps[newID] = newChirp
 
 	if err = db.writeDB(data); err != nil {
 		return domain.Chirp{}, err
@@ -38,10 +34,10 @@ func (db *DB) GetChirps() ([]domain.Chirp, error) {
 		return nil, err
 	}
 
-	return data.Chirps, nil
+	return getValues(data.Chirps), nil
 }
 
-func (db *DB) GetChirp(id int) (domain.Chirp, error) {
+func (db *DB) GetChirpByID(id int) (domain.Chirp, error) {
 	data, err := db.loadDB()
 	if err != nil {
 		return domain.Chirp{}, err

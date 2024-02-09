@@ -17,7 +17,7 @@ type DB struct {
 }
 
 type Data struct {
-	Chirps        []domain.Chirp       `json:"chirps"`
+	Chirps        map[int]domain.Chirp `json:"chirps"`
 	Users         map[int]domain.User  `json:"users"`
 	RevokedTokens map[string]time.Time `json:"revoked_tokens"`
 }
@@ -33,7 +33,7 @@ func NewDB(path string) *DB {
 
 func emptyData() Data {
 	return Data{
-		Chirps:        []domain.Chirp{},
+		Chirps:        make(map[int]domain.Chirp),
 		Users:         make(map[int]domain.User),
 		RevokedTokens: make(map[string]time.Time),
 	}

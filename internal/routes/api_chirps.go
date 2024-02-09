@@ -55,7 +55,7 @@ func handlerGetChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.Api
 		return
 	}
 
-	chirp, err := cfg.DB.GetChirp(id)
+	chirp, err := cfg.DB.GetChirpByID(id)
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		return
