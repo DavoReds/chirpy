@@ -26,9 +26,10 @@ func (db *DB) CreateUser(email string, password []byte) (domain.User, error) {
 	}
 
 	newUser := domain.User{
-		ID:       newID,
-		Email:    email,
-		Password: hashedPassword,
+		ID:          newID,
+		Email:       email,
+		Password:    hashedPassword,
+		IsChirpyRed: false,
 	}
 
 	data.Users[newID] = newUser
@@ -101,4 +102,25 @@ func (db *DB) UpdateUser(id int, email string, password []byte) (domain.User, er
 	}
 
 	return newUser, nil
+}
+
+// Gives a user the satisfaction of having paid us more than necessary
+func (db *DB) UpgradeUser(id int) error {
+	data, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+
+	if user, ok := data.Users[id]; ok {
+		user.IsChirpyRed = true
+		data.Users[id] = user
+	} else {
+		return errors.New("User doesn't exist")
+	}
+
+	if err = db.writeDB(data); err != nil {
+		return err
+	}
+
+	return nil
 }

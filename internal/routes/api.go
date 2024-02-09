@@ -44,6 +44,10 @@ func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 		handlerRevoke(w, r, apiCfg)
 	})
 
+	apiRouter.Post("/polka/webhooks", func(w http.ResponseWriter, r *http.Request) {
+		handlerPolkaWebhook(w, r, apiCfg)
+	})
+
 	router.Mount("/api", apiRouter)
 }
 

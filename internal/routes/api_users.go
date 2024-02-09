@@ -16,8 +16,9 @@ func handlerPostUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 	}
 
 	type response struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
+		ID          int    `json:"id"`
+		Email       string `json:"email"`
+		IsChirpyRed bool   `json:"is_chirpy_red"`
 	}
 
 	params := &parameters{}
@@ -44,8 +45,9 @@ func handlerPostUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 	}
 
 	respondWithJSON(w, http.StatusCreated, response{
-		ID:    user.ID,
-		Email: user.Email,
+		ID:          user.ID,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	})
 }
 
@@ -58,6 +60,7 @@ func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiCon
 	type response struct {
 		ID           int    `json:"id"`
 		Email        string `json:"email"`
+		IsChirpyRed  bool   `json:"is_chirpy_red"`
 		Token        string `json:"token"`
 		RefreshToken string `json:"refresh_token"`
 	}
@@ -108,6 +111,7 @@ func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiCon
 	respondWithJSON(w, http.StatusOK, response{
 		ID:           user.ID,
 		Email:        user.Email,
+		IsChirpyRed:  user.IsChirpyRed,
 		Token:        accessToken,
 		RefreshToken: refreshToken,
 	})
@@ -120,8 +124,9 @@ func handlerPutUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Api
 	}
 
 	type response struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
+		ID          int    `json:"id"`
+		IsChirpyRed bool   `json:"is_chirpy_red"`
+		Email       string `json:"email"`
 	}
 
 	tokenString := extractAuthorizationHeader(r)
@@ -176,7 +181,8 @@ func handlerPutUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Api
 	}
 
 	respondWithJSON(w, http.StatusOK, response{
-		ID:    user.ID,
-		Email: user.Email,
+		ID:          user.ID,
+		Email:       user.Email,
+		IsChirpyRed: user.IsChirpyRed,
 	})
 }
