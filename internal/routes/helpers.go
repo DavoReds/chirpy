@@ -4,7 +4,11 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
 )
 
 func decodeJSON(reader io.Reader, readTo interface{}) error {
@@ -48,4 +52,68 @@ func cleanString(text string) string {
 	clean := strings.Join(words, " ")
 
 	return clean
+}
+
+func extractAuthorizationHeader(r *http.Request) string {
+	tokenHeader := r.Header.Get("Authorization")
+	tokenString := strings.TrimPrefix(tokenHeader, "Bearer ")
+
+	return tokenString
+}
+
+func getAccessJWTClaims(userID int) *jwt.RegisteredClaims {
+	currentTime := time.Now().UTC()
+	jwtCurrentTime := jwt.NewNumericDate(currentTime)
+
+	timeToExpire := currentTime.Add(time.Hour)
+	jwtTimeToExpire := jwt.NewNumericDate(timeToExpire)
+
+	claims := &jwt.RegisteredClaims{
+		Issuer:    "chirpy-access",
+		IssuedAt:  jwtCurrentTime,
+		ExpiresAt: jwtTimeToExpire,
+		Subject:   strconv.Itoa(userID),
+	}
+
+	return claims
+}
+
+func getRefreshJWTClaims(userID int) *jwt.RegisteredClaims {
+	currentTime := time.Now().UTC()
+	jwtCurrentTime := jwt.NewNumericDate(currentTime)
+
+	timeToExpire := currentTime.Add(time.Hour * 24 * 60)
+	jwtTimeToExpire := jwt.NewNumericDate(timeToExpire)
+
+	claims := &jwt.RegisteredClaims{
+		Issuer:    "chirpy-refresh",
+		IssuedAt:  jwtCurrentTime,
+		ExpiresAt: jwtTimeToExpire,
+		Subject:   strconv.Itoa(userID),
+	}
+
+	return claims
+}
+
+// Returns the string representation of a newly created JWT
+func createJWT(claims *jwt.RegisteredClaims, secret []byte) (string, error) {
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	ss, err := token.SignedString(secret)
+	if err != nil {
+		return "", err
+	}
+
+	return ss, nil
+}
+
+func verifyJWTIssuer(token *jwt.Token, issuer string) (bool, error) {
+	tokenIssuer, err := token.Claims.GetIssuer()
+	if err != nil {
+		return false, err
+	}
+	if tokenIssuer != issuer {
+		return false, nil
+	}
+
+	return true, nil
 }

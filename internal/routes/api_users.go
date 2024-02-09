@@ -4,8 +4,6 @@ import (
 	"log"
 	"net/http"
 	"strconv"
-	"strings"
-	"time"
 
 	"github.com/DavoReds/chirpy/internal/middleware"
 	"github.com/golang-jwt/jwt/v5"
@@ -52,33 +50,10 @@ func handlerPostUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 	})
 }
 
-func getClaims(expiresInSeconds int, userID int) *jwt.RegisteredClaims {
-	currentTime := time.Now().UTC()
-	jwtCurrentTime := jwt.NewNumericDate(currentTime)
-
-	var timeToExpire time.Time
-	if expiresInSeconds == 0 || expiresInSeconds > 24*60*60 {
-		timeToExpire = currentTime.Add(time.Hour * 24)
-	} else {
-		timeToExpire = currentTime.Add(time.Second * time.Duration(expiresInSeconds))
-	}
-	jwtTimeToExpire := jwt.NewNumericDate(timeToExpire)
-
-	claims := &jwt.RegisteredClaims{
-		Issuer:    "chirpy",
-		IssuedAt:  jwtCurrentTime,
-		ExpiresAt: jwtTimeToExpire,
-		Subject:   strconv.Itoa(userID),
-	}
-
-	return claims
-}
-
 func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
 	type parameters struct {
-		Password         string `json:"password"`
-		Email            string `json:"email"`
-		ExpiresInSeconds int    `json:"expires_in_seconds"`
+		Password string `json:"password"`
+		Email    string `json:"email"`
 	}
 
 	type response struct {
@@ -114,10 +89,8 @@ func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiCon
 		return
 	}
 
-	claims := getClaims(params.ExpiresInSeconds, user.ID)
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ss, err := token.SignedString([]byte(cfg.JWTSecret))
+	accessClaims := getAccessJWTClaims(user.ID)
+	accessToken, err := createJWT(accessClaims, []byte(cfg.JWTSecret))
 	if err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
@@ -142,13 +115,12 @@ func handlerPutUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Api
 		Email string `json:"email"`
 	}
 
-	tokenHeader := r.Header.Get("Authorization")
-	if tokenHeader == "" {
+	tokenString := extractAuthorizationHeader(r)
+	if tokenString == "" {
 		respondWithError(w, http.StatusBadRequest, "Missing Authorization header")
 		return
 	}
 
-	tokenString := strings.TrimPrefix(tokenHeader, "Bearer ")
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return []byte(cfg.JWTSecret), nil
 	})
