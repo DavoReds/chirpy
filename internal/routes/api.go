@@ -13,6 +13,7 @@ func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter.HandleFunc("/reset", func(w http.ResponseWriter, r *http.Request) {
 		handlerReset(w, r, apiCfg)
 	})
+
 	apiRouter.Get("/chirps", func(w http.ResponseWriter, r *http.Request) {
 		handlerGetChirps(w, r, apiCfg)
 	})
@@ -22,6 +23,7 @@ func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter.Get("/chirps/{chirpID}", func(w http.ResponseWriter, r *http.Request) {
 		handlerGetChirp(w, r, apiCfg)
 	})
+
 	apiRouter.Post("/users", func(w http.ResponseWriter, r *http.Request) {
 		handlerPostUsers(w, r, apiCfg)
 	})
@@ -30,6 +32,10 @@ func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	})
 	apiRouter.Post("/login", func(w http.ResponseWriter, r *http.Request) {
 		handlerLogin(w, r, apiCfg)
+	})
+
+	apiRouter.Post("/refresh", func(w http.ResponseWriter, r *http.Request) {
+		handlerRefresh(w, r, apiCfg)
 	})
 
 	router.Mount("/api", apiRouter)

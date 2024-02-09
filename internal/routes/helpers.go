@@ -106,6 +106,17 @@ func createJWT(claims *jwt.RegisteredClaims, secret []byte) (string, error) {
 	return ss, nil
 }
 
+func parseJWT(tokenString string, secret []byte) (*jwt.Token, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
+		return secret, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return token, nil
+}
+
 func verifyJWTIssuer(token *jwt.Token, issuer string) (bool, error) {
 	tokenIssuer, err := token.Claims.GetIssuer()
 	if err != nil {

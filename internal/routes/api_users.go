@@ -6,7 +6,6 @@ import (
 	"strconv"
 
 	"github.com/DavoReds/chirpy/internal/middleware"
-	"github.com/golang-jwt/jwt/v5"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -57,9 +56,10 @@ func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiCon
 	}
 
 	type response struct {
-		ID    int    `json:"id"`
-		Email string `json:"email"`
-		Token string `json:"token"`
+		ID           int    `json:"id"`
+		Email        string `json:"email"`
+		Token        string `json:"token"`
+		RefreshToken string `json:"refresh_token"`
 	}
 
 	params := &parameters{}
@@ -97,10 +97,19 @@ func handlerLogin(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiCon
 		return
 	}
 
+	refreshClaims := getRefreshJWTClaims(user.ID)
+	refreshToken, err := createJWT(refreshClaims, []byte(cfg.JWTSecret))
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+
 	respondWithJSON(w, http.StatusOK, response{
-		ID:    user.ID,
-		Email: user.Email,
-		Token: ss,
+		ID:           user.ID,
+		Email:        user.Email,
+		Token:        accessToken,
+		RefreshToken: refreshToken,
 	})
 }
 
@@ -121,13 +130,21 @@ func handlerPutUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Api
 		return
 	}
 
-	token, err := jwt.ParseWithClaims(tokenString, &jwt.RegisteredClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte(cfg.JWTSecret), nil
-	})
+	token, err := parseJWT(tokenString, []byte(cfg.JWTSecret))
 	if err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusUnauthorized, "Unauthorized")
 		return
+	}
+
+	isAccess, err := verifyJWTIssuer(token, "chirpy-access")
+	if err != nil {
+		log.Println(err)
+		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		return
+	}
+	if !isAccess {
+		http.Error(w, "Invalid access token", http.StatusUnauthorized)
 	}
 
 	idString, err := token.Claims.GetSubject()

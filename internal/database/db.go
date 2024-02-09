@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"sync"
+	"time"
 
 	"github.com/DavoReds/chirpy/internal/domain"
 )
@@ -16,8 +17,9 @@ type DB struct {
 }
 
 type Data struct {
-	Chirps []domain.Chirp      `json:"chirps"`
-	Users  map[int]domain.User `json:"users"`
+	Chirps        []domain.Chirp       `json:"chirps"`
+	Users         map[int]domain.User  `json:"users"`
+	RevokedTokens map[string]time.Time `json:"revoked_tokens"`
 }
 
 func NewDB(path string) *DB {
@@ -31,8 +33,9 @@ func NewDB(path string) *DB {
 
 func emptyData() Data {
 	return Data{
-		Users:  make(map[int]domain.User),
-		Chirps: []domain.Chirp{},
+		Chirps:        []domain.Chirp{},
+		Users:         make(map[int]domain.User),
+		RevokedTokens: make(map[string]time.Time),
 	}
 }
 
