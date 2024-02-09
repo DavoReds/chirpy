@@ -129,7 +129,7 @@ func handlerPutUsers(w http.ResponseWriter, r *http.Request, cfg *middleware.Api
 		Email       string `json:"email"`
 	}
 
-	tokenString := extractAuthorizationHeader(r)
+	tokenString := extractBearerHeader(r)
 	if tokenString == "" {
 		respondWithError(w, http.StatusBadRequest, "Missing Authorization header")
 		return

@@ -55,9 +55,16 @@ func cleanString(text string) string {
 	return clean
 }
 
-func extractAuthorizationHeader(r *http.Request) string {
+func extractBearerHeader(r *http.Request) string {
 	tokenHeader := r.Header.Get("Authorization")
 	tokenString := strings.TrimPrefix(tokenHeader, "Bearer ")
+
+	return tokenString
+}
+
+func extractAPIKeyHeader(r *http.Request) string {
+	tokenHeader := r.Header.Get("Authorization")
+	tokenString := strings.TrimPrefix(tokenHeader, "ApiKey ")
 
 	return tokenString
 }
@@ -131,7 +138,7 @@ func verifyJWTIssuer(token *jwt.Token, issuer string) (bool, error) {
 }
 
 func getUserID(r *http.Request, secret []byte) (int, error) {
-	tokenString := extractAuthorizationHeader(r)
+	tokenString := extractBearerHeader(r)
 	if tokenString == "" {
 		return 0, errors.New("Authorization header not present")
 	}

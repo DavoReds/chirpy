@@ -13,7 +13,7 @@ func handlerRefresh(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiC
 		Token string `json:"token"`
 	}
 
-	tokenString := extractAuthorizationHeader(r)
+	tokenString := extractBearerHeader(r)
 	if tokenString == "" {
 		http.Error(w, "Missing refresh token", http.StatusBadRequest)
 		return
@@ -74,7 +74,7 @@ func handlerRefresh(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiC
 }
 
 func handlerRevoke(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
-	tokenString := extractAuthorizationHeader(r)
+	tokenString := extractBearerHeader(r)
 	if tokenString == "" {
 		http.Error(w, "Missing refresh token", http.StatusBadRequest)
 		return

@@ -3,6 +3,7 @@ package routes
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/DavoReds/chirpy/internal/middleware"
 )
@@ -13,6 +14,13 @@ func handlerPolkaWebhook(w http.ResponseWriter, r *http.Request, cfg *middleware
 			UserID int `json:"user_id"`
 		} `json:"data"`
 		Event string `json:"event"`
+	}
+
+	polkaKey := os.Getenv("POLKA_KEY")
+	apiKey := extractAPIKeyHeader(r)
+	if apiKey == "" || apiKey != polkaKey {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
 	}
 
 	params := &parameters{}
