@@ -58,15 +58,47 @@ func handlerGetChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.Api
 	idParam := chi.URLParam(r, "chirpID")
 	id, err := strconv.Atoi(idParam)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
 		return
 	}
 
 	chirp, err := cfg.DB.GetChirpByID(id)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, "Chirp doesn't exist", http.StatusNotFound)
 		return
 	}
 
 	respondWithJSON(w, http.StatusOK, chirp)
+}
+
+func handlerDeleteChirp(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+	idParam := chi.URLParam(r, "chirpID")
+	chirpID, err := strconv.Atoi(idParam)
+	if err != nil {
+		http.Error(w, "Invalid ID", http.StatusBadRequest)
+		return
+	}
+
+	userID, err := getUserID(r, []byte(cfg.JWTSecret))
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	chirp, err := cfg.DB.GetChirpByID(chirpID)
+	if err != nil {
+		http.Error(w, "Chirp doesn't exist", http.StatusNotFound)
+		return
+	}
+
+	if chirp.AuthorID != userID {
+		w.WriteHeader(http.StatusForbidden)
+		return
+	}
+
+	err = cfg.DB.DeleteChirp(chirp.ID)
+	if err != nil {
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
 }

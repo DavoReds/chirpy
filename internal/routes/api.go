@@ -23,6 +23,9 @@ func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter.Get("/chirps/{chirpID}", func(w http.ResponseWriter, r *http.Request) {
 		handlerGetChirp(w, r, apiCfg)
 	})
+	apiRouter.Delete("/chirps/{chirpID}", func(w http.ResponseWriter, r *http.Request) {
+		handlerDeleteChirp(w, r, apiCfg)
+	})
 
 	apiRouter.Post("/users", func(w http.ResponseWriter, r *http.Request) {
 		handlerPostUsers(w, r, apiCfg)

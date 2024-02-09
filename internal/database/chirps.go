@@ -52,3 +52,19 @@ func (db *DB) GetChirpByID(id int) (domain.Chirp, error) {
 
 	return domain.Chirp{}, errors.New("Doesn't exist")
 }
+
+func (db *DB) DeleteChirp(id int) error {
+	data, err := db.loadDB()
+	if err != nil {
+		return err
+	}
+
+	delete(data.Chirps, id)
+
+	err = db.writeDB(data)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
