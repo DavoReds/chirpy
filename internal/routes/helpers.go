@@ -2,6 +2,7 @@ package routes
 
 import (
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"strconv"
@@ -127,4 +128,36 @@ func verifyJWTIssuer(token *jwt.Token, issuer string) (bool, error) {
 	}
 
 	return true, nil
+}
+
+func getUserID(r *http.Request, secret []byte) (int, error) {
+	tokenString := extractAuthorizationHeader(r)
+	if tokenString == "" {
+		return 0, errors.New("Authorization header not present")
+	}
+
+	token, err := parseJWT(tokenString, secret)
+	if err != nil {
+		return 0, err
+	}
+
+	isAccess, err := verifyJWTIssuer(token, "chirpy-access")
+	if err != nil {
+		return 0, err
+	}
+	if !isAccess {
+		return 0, errors.New("Not an access token")
+	}
+
+	idString, err := token.Claims.GetSubject()
+	if err != nil {
+		return 0, err
+	}
+
+	id, err := strconv.Atoi(idString)
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }

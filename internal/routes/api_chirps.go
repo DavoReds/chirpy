@@ -24,6 +24,13 @@ func handlerPostChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.A
 		Body string `json:"body"`
 	}
 
+	id, err := getUserID(r, []byte(cfg.JWTSecret))
+	if err != nil {
+		log.Println(err)
+		respondWithJSON(w, http.StatusUnauthorized, "Unathorized")
+		return
+	}
+
 	params := &parameters{}
 	if err := decodeJSON(r.Body, params); err != nil {
 		log.Println(err)
@@ -37,7 +44,7 @@ func handlerPostChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.A
 	}
 
 	body := cleanString(params.Body)
-	chirp, err := cfg.DB.CreateChirp(body)
+	chirp, err := cfg.DB.CreateChirp(body, id)
 	if err != nil {
 		log.Println(err)
 		respondWithError(w, http.StatusInternalServerError, "Something went wrong")

@@ -6,7 +6,7 @@ import (
 	"github.com/DavoReds/chirpy/internal/domain"
 )
 
-func (db *DB) CreateChirp(body string) (domain.Chirp, error) {
+func (db *DB) CreateChirp(body string, authorID int) (domain.Chirp, error) {
 	data, err := db.loadDB()
 	if err != nil {
 		return domain.Chirp{}, err
@@ -15,8 +15,9 @@ func (db *DB) CreateChirp(body string) (domain.Chirp, error) {
 	lastID := maxIntKey(data.Chirps)
 	newID := lastID + 1
 	newChirp := domain.Chirp{
-		Body: body,
-		ID:   newID,
+		Body:     body,
+		ID:       newID,
+		AuthorID: authorID,
 	}
 
 	data.Chirps[newID] = newChirp
