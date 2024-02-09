@@ -16,6 +16,24 @@ func handlerGetChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 		return
 	}
 
+	authorIDParam := r.URL.Query().Get("author_id")
+	if authorIDParam != "" {
+		id, err := strconv.Atoi(authorIDParam)
+		if err != nil {
+			http.Error(w, "Not a valid ID", http.StatusBadRequest)
+			return
+		}
+
+		chirps, err := cfg.DB.GetChirpsFromAuthor(id)
+		if err != nil {
+			http.Error(w, "Something went wrong", http.StatusInternalServerError)
+			return
+		}
+
+		respondWithJSON(w, http.StatusOK, chirps)
+		return
+	}
+
 	respondWithJSON(w, http.StatusOK, data)
 }
 

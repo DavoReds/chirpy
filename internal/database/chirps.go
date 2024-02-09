@@ -38,6 +38,22 @@ func (db *DB) GetChirps() ([]domain.Chirp, error) {
 	return getValues(data.Chirps), nil
 }
 
+func (db *DB) GetChirpsFromAuthor(authorID int) ([]domain.Chirp, error) {
+	data, err := db.loadDB()
+	if err != nil {
+		return nil, err
+	}
+
+	var chirpsByAuthor []domain.Chirp
+	for _, chirp := range data.Chirps {
+		if chirp.AuthorID == authorID {
+			chirpsByAuthor = append(chirpsByAuthor, chirp)
+		}
+	}
+
+	return chirpsByAuthor, nil
+}
+
 func (db *DB) GetChirpByID(id int) (domain.Chirp, error) {
 	data, err := db.loadDB()
 	if err != nil {
