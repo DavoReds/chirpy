@@ -37,6 +37,9 @@ func MountAPIEndpoints(apiCfg *middleware.ApiConfig, router *chi.Mux) {
 	apiRouter.Post("/refresh", func(w http.ResponseWriter, r *http.Request) {
 		handlerRefresh(w, r, apiCfg)
 	})
+	apiRouter.Post("/revoke", func(w http.ResponseWriter, r *http.Request) {
+		handlerRevoke(w, r, apiCfg)
+	})
 
 	router.Mount("/api", apiRouter)
 }

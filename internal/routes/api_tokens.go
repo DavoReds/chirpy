@@ -72,3 +72,37 @@ func handlerRefresh(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiC
 		Token: newToken,
 	})
 }
+
+func handlerRevoke(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
+	tokenString := extractAuthorizationHeader(r)
+	if tokenString == "" {
+		http.Error(w, "Missing refresh token", http.StatusBadRequest)
+		return
+	}
+
+	token, err := parseJWT(tokenString, []byte(cfg.JWTSecret))
+	if err != nil {
+		http.Error(w, "Unathorized", http.StatusBadRequest)
+		return
+	}
+
+	isRefresh, err := verifyJWTIssuer(token, "chirpy-refresh")
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+	if !isRefresh {
+		http.Error(w, "Not a refresh token", http.StatusBadRequest)
+		return
+	}
+
+	err = cfg.DB.RevokeToken(tokenString)
+	if err != nil {
+		log.Println(err)
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
