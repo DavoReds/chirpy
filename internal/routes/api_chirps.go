@@ -10,9 +10,9 @@ import (
 )
 
 func handlerGetChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {
-	data, err := cfg.DB.GetChirps()
+	chirps, err := cfg.DB.GetChirps()
 	if err != nil {
-		respondWithError(w, http.StatusInternalServerError, "Something went wrong")
+		http.Error(w, "Something went wrong", http.StatusInternalServerError)
 		return
 	}
 
@@ -24,17 +24,21 @@ func handlerGetChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.Ap
 			return
 		}
 
-		chirps, err := cfg.DB.GetChirpsFromAuthor(id)
+		chirps = filterChirpsByAuthor(chirps, id)
+	}
+
+	sortOrder := r.URL.Query().Get("sort")
+	if sortOrder != "" {
+		sortOrder, err := parseSortOrder(sortOrder)
 		if err != nil {
-			http.Error(w, "Something went wrong", http.StatusInternalServerError)
+			http.Error(w, "Invalid sort order", http.StatusBadRequest)
 			return
 		}
 
-		respondWithJSON(w, http.StatusOK, chirps)
-		return
+		sortChirps(chirps, sortOrder)
 	}
 
-	respondWithJSON(w, http.StatusOK, data)
+	respondWithJSON(w, http.StatusOK, chirps)
 }
 
 func handlerPostChirps(w http.ResponseWriter, r *http.Request, cfg *middleware.ApiConfig) {

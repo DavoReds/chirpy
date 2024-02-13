@@ -1,14 +1,18 @@
 package routes
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/DavoReds/chirpy/internal/domain"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -167,4 +171,43 @@ func getUserID(r *http.Request, secret []byte) (int, error) {
 	}
 
 	return id, nil
+}
+
+func filterChirpsByAuthor(chirps []domain.Chirp, authorID int) []domain.Chirp {
+	var chirpsByAuthor []domain.Chirp
+	for _, chirp := range chirps {
+		if chirp.AuthorID == authorID {
+			chirpsByAuthor = append(chirpsByAuthor, chirp)
+		}
+	}
+
+	return chirpsByAuthor
+}
+
+type sortOrder string
+
+const (
+	Ascending  sortOrder = "asc"
+	Descending sortOrder = "desc"
+)
+
+func parseSortOrder(s string) (sortOrder, error) {
+	switch strings.ToLower(s) {
+	case "asc":
+		return Ascending, nil
+	case "desc":
+		return Descending, nil
+	default:
+		return "", fmt.Errorf("Invalid order: %s", s)
+	}
+}
+
+func sortChirps(chirps []domain.Chirp, order sortOrder) {
+	slices.SortFunc(chirps, func(a, b domain.Chirp) int {
+		if order == Ascending {
+			return cmp.Compare(a.ID, b.ID)
+		} else {
+			return cmp.Compare(b.ID, a.ID)
+		}
+	})
 }
